@@ -2,6 +2,8 @@
 version: "3.7"
 services:
   jenkins:
+    extra_hosts:
+    - host.docker.internal:host-gateway
     build: config/
     environment:
       CASC_JENKINS_CONFIG: /var/jenkins_home/jcasc
@@ -25,85 +27,8 @@ services:
       - "50000:50000"
     networks:
       - jenkins
-
-  fleet-server:
-    extends:
-      file: ../src/test/resources/elastic-stack.yml
-      service: fleet-server
-    networks:
-      - jenkins
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
-      kibana:
-        condition: service_healthy
-
-  elasticsearch:
-    extends:
-      file: ../src/test/resources/elastic-stack.yml
-      service: elasticsearch
-    networks:
-      - jenkins
-
-  kibana:
-    extends:
-      file: ../src/test/resources/elastic-stack.yml
-      service: kibana
-    networks:
-      - jenkins
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
-
-  jaeger-all-in-one:
-    image: jaegertracing/all-in-one:latest
-    ports:
-      - "16686:16686"
-      - "14268"
-      - "14250"
-    networks:
-      - jenkins
-
-  zipkin-all-in-one:
-    image: openzipkin/zipkin:latest
-    ports:
-      - "9411:9411"
-    networks:
-      - jenkins
-
-  prometheus:
-    image: prom/prometheus:latest
-    volumes:
-      - ./config/prometheus.yaml:/etc/prometheus/prometheus.yml
-    ports:
-      - "9090:9090"
-    networks:
-      - jenkins
-
-  otel-collector:
-    image: ${OTELCOL_IMG}
-    command: ["--config=/etc/otel-collector-config.yaml", "${OTELCOL_ARGS}"]
-    volumes:
-      - ./config/otel-collector-config.yaml:/etc/otel-collector-config.yaml
-    ports:
-      - "1888:1888"   # pprof extension
-      - "8888:8888"   # Prometheus metrics exposed by the collector
-      - "8889:8889"   # Prometheus exporter metrics
-      - "13133:13133" # health_check extension
-      - "4317"        # OTLP gRPC receiver
-      - "55670:55679" # zpages extension
-    depends_on:
-      - jaeger-all-in-one
-      - zipkin-all-in-one
-      - fleet-server
-      - prometheus
-    networks:
-      - jenkins
-
 volumes:
   jenkins:
-    driver: local
-  esdata:
     driver: local
 
 networks:
